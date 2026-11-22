@@ -22,7 +22,7 @@ export function ProfilePhotoStep({photo, onPhoto, fullName, email, accountType})
           <p className="text-sm text-zinc-600">{accountType === "officer" ? "Government officer" : "Regular user"}</p>
         </div>
       </div>
-      <FileUpload type="photo" label="Choose a profile photo (optional)" description="You can add a profile photo later." accept="image/*" file={photo} onSelect={onPhoto} className="h-full" />
+      <FileUpload type="photo" label="Choose a profile photo (optional)" description="Choose a JPEG, PNG, or WebP image up to 2 MB, or add one later." accept=".jpg,.jpeg,.png,.webp" file={photo} onSelect={onPhoto} className="h-full" />
     </div>
   );
 }

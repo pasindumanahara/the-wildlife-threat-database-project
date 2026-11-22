@@ -1,11 +1,13 @@
 import {useId, useState} from "react";
 import MobileLogo from "../../../assets/logos/TWTDBP-Black.svg";
 import {LoginImagePanel} from "./LoginImagePanel";
-import {Link, useNavigate} from "react-router-dom";
+import {Link} from "react-router-dom";
 import {login} from "../../../services/auth";
+import {ElephantLoader} from "../../animation/loader/ElephantLoader";
+import {useDashboardTransition} from "../../animation/loader/useDashboardTransition";
 
 export function LoginCard({imageSrc, signUpHref = "/signup"}) {
-  const navigate = useNavigate();
+  const {openingDashboard, openDashboard} = useDashboardTransition();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const id = useId();
@@ -20,13 +22,15 @@ export function LoginCard({imageSrc, signUpHref = "/signup"}) {
     setBusy(true);
     try {
       await login(fields.get("username"), fields.get("password"));
-      navigate("/dashboard", {replace: true});
+      openDashboard({replace: true});
     } catch (cause) {
       setError(cause.message);
     } finally {
       setBusy(false);
     }
   }
+
+  if (openingDashboard) return <ElephantLoader />;
 
   return (
     <section
@@ -61,7 +65,6 @@ export function LoginCard({imageSrc, signUpHref = "/signup"}) {
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
-                placeholder="Enter your username or email"
                 required
                 className="twtdbp-input"
               />
@@ -76,7 +79,6 @@ export function LoginCard({imageSrc, signUpHref = "/signup"}) {
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="Enter your password"
                 required
                 className="twtdbp-input"
               />
