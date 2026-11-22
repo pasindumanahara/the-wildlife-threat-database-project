@@ -10,6 +10,7 @@ import {ProfilePhotoStep} from "../components/auth/signup/ProfilePhotoStep";
 import {LoginImagePanel} from "../components/auth/login/LoginImagePanel";
 import {ArrowLeft} from "lucide-react";
 import {Link} from "react-router-dom";
+import {register} from "../services/auth";
 import {ElephantLoader} from "../components/animation/loader/ElephantLoader";
 import {useDashboardTransition} from "../components/animation/loader/useDashboardTransition";
 import {
@@ -29,12 +30,13 @@ export function SignupPage({notify, dismiss}) {
   const [draft, setDraft] = useState({countryCode: "LK"});
   const [documentFile, setDocumentFile] = useState(null);
   const [photo, setPhoto] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [validating, setValidating] = useState(false);
   const officer = account === "officer";
   const titles = [
     "Create an account",
     officer ? "Enter your officer details" : "Enter your details",
-    "Add a profile photo",
+    "Add a profile photo (optional)",
   ];
   const descriptions = [
     "Choose the account type that applies to you",
@@ -89,7 +91,7 @@ export function SignupPage({notify, dismiss}) {
   }
   async function handleSubmit(event) {
     event.preventDefault();
-    if (validating) return;
+    if (validating || busy) return;
     if (step === 1 && !account)
       return notify("error", "Choose an account type to continue.");
     if (step === 2) {
@@ -133,8 +135,23 @@ export function SignupPage({notify, dismiss}) {
       setSlideDirection("forward");
       setStep(step + 1);
     } else {
-      notify("success", "Your signup details passed validation.");
-      openDashboard();
+      const payload = new FormData();
+      payload.append("account", account);
+      for (const [key, value] of Object.entries(draft)) payload.append(key, value);
+      if (photo) payload.append("photo", photo);
+      if (officer && documentFile) payload.append("document", documentFile);
+      setBusy(true);
+      try {
+        const result = await register(payload);
+        notify("success", "Account created successfully.");
+        openDashboard({replace: true, state: {
+          notice: result.officerStatus === "pending" ? "Officer verification is pending." : "",
+        }});
+      } catch (cause) {
+        notify("error", cause.message);
+      } finally {
+        setBusy(false);
+      }
     }
   }
   if (openingDashboard) return <ElephantLoader />;
@@ -156,7 +173,7 @@ export function SignupPage({notify, dismiss}) {
               <button
                 type="button"
                 onClick={goBack}
-                disabled={validating}
+                disabled={validating || busy}
                 aria-label="Go back"
                 className="mb-4 inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-twtdbp-crimson"
               >
@@ -196,7 +213,7 @@ export function SignupPage({notify, dismiss}) {
                   <AccountTypeStep account={account} onChange={handleAccount} />
                 )}
                 {step === 2 && (
-                  <fieldset disabled={validating} className="min-w-0">
+                  <fieldset disabled={validating || busy} className="min-w-0">
                     <SignupDetailsStep
                       officer={officer}
                       draft={draft}
@@ -207,7 +224,7 @@ export function SignupPage({notify, dismiss}) {
                   </fieldset>
                 )}
                 {step === 3 && (
-                  <fieldset disabled={validating} className="min-w-0">
+                  <fieldset disabled={validating || busy} className="min-w-0">
                     <ProfilePhotoStep
                       photo={photo}
                       onPhoto={handlePhoto}
@@ -224,7 +241,7 @@ export function SignupPage({notify, dismiss}) {
                     <Button
                       type="button"
                       onClick={goBack}
-                      disabled={validating}
+                      disabled={validating || busy}
                       size={48}
                       className="gap-2 border border-zinc-300 bg-white text-zinc-800 hover:!bg-zinc-100 hover:!text-zinc-900"
                     >
@@ -234,11 +251,11 @@ export function SignupPage({notify, dismiss}) {
                   )}
                   <Button
                     type="submit"
-                    disabled={validating}
+                    disabled={validating || busy}
                     size={48}
                     className={`text-white! ${step === 1 ? "w-full" : ""}`}
                   >
-                    {step === 3 ? "Create account" : "Continue"}
+                    {busy ? "Creating account..." : step === 3 ? "Create account" : "Continue"}
                   </Button>
                 </div>
               </form>

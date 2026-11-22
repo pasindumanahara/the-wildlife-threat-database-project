@@ -102,7 +102,7 @@ export function SignupDetailsStep({
               </button>
             </div>
             <p id="signup-password-hint" className="text-xs text-zinc-600">
-              Use atleast 8 characters with uppercase and lowercase letters, a
+              Use at least 8 characters with uppercase and lowercase letters, a
               number, and a symbol. No spaces.
             </p>
           </div>
@@ -112,15 +112,15 @@ export function SignupDetailsStep({
             <legend className="px-1 font-semibold">Officer verification</legend>
             <p className="text-sm font-medium">Verification document</p>
             <p className="text-sm text-zinc-600">
-              Upload a document that verifies your government role
+              Upload a PDF under 10 MB that verifies your government role.
             </p>
             <FileUpload
               file={documentFile}
               type="document"
               label="Choose a verification document"
-              description=""
+              description="PDF only, up to 10 MB."
               onSelect={onDocument}
-              accept={".pdf,.jpg,.jpeg,.png"}
+              accept=".pdf,application/pdf"
             />
           </fieldset>
         )}

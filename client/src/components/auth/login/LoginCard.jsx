@@ -1,20 +1,33 @@
-import {useId} from "react";
+import {useId, useState} from "react";
 import MobileLogo from "../../../assets/logos/TWTDBP-Black.svg";
 import {LoginImagePanel} from "./LoginImagePanel";
 import {Link} from "react-router-dom";
+import {login} from "../../../services/auth";
 import {ElephantLoader} from "../../animation/loader/ElephantLoader";
 import {useDashboardTransition} from "../../animation/loader/useDashboardTransition";
 
 export function LoginCard({imageSrc, signUpHref = "/signup"}) {
   const {openingDashboard, openDashboard} = useDashboardTransition();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const id = useId();
   const usernameId = id + "-username";
   const passwordId = id + "-password";
   const titleId = id + "-title";
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    openDashboard();
+    const fields = new FormData(event.currentTarget);
+    setError("");
+    setBusy(true);
+    try {
+      await login(fields.get("username"), fields.get("password"));
+      openDashboard({replace: true});
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (openingDashboard) return <ElephantLoader />;
@@ -71,11 +84,13 @@ export function LoginCard({imageSrc, signUpHref = "/signup"}) {
               />
             </div>
 
+            {error && <p role="alert" className="text-sm text-twtdbp-crimsondark">{error}</p>}
             <button
               type="submit"
+              disabled={busy}
               className="h-12 w-full rounded-lg bg-twtdbp-crimson px-4 font-semibold text-white hover:bg-twtdbp-crimsondark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-twtdbp-crimson cursor-pointer"
             >
-              Log in
+              {busy ? "Logging in..." : "Log in"}
             </button>
           </form>
 

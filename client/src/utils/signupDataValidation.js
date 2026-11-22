@@ -1,9 +1,7 @@
-const ALLOWED_EXTENSIONS = new Set(["pdf", "jpg", "jpeg", "png"]);
+const ALLOWED_EXTENSIONS = new Set(["pdf"]);
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
-  "image/jpeg",
-  "image/png",
 ]);
 
 const DANGEROUS_EXTENSIONS = new Set([
@@ -45,7 +43,7 @@ const DANGEROUS_EXTENSIONS = new Set([
   "gz",
 ]);
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 // Checks the format and date code of a Sri Lankan NIC number.
 export function validateNIC(nic) {
@@ -57,7 +55,7 @@ export function validateNIC(nic) {
   const oldNicPattern = /^(\d{2})(\d{3})\d{4}[VX]$/;
   const newNicPattern = /^(\d{4})(\d{3})\d{5}$/;
 
-  let dayOfYear = null;
+  let dayOfYear;
 
   if (oldNicPattern.test(normalized)) {
     dayOfYear = parseInt(normalized.slice(2, 5), 10);
@@ -251,7 +249,7 @@ export async function validateVerificationDocument(
   if (parts.length < 2) {
     return {
       isValid: false,
-      error: "File must have a valid extension (.pdf, .jpg, .jpeg, .png).",
+      error: "File must have a valid .pdf extension.",
     };
   }
 
@@ -269,7 +267,7 @@ export async function validateVerificationDocument(
   if (!ALLOWED_EXTENSIONS.has(extension)) {
     return {
       isValid: false,
-      error: "Only .pdf, .jpg, .jpeg, and .png files are allowed.",
+      error: "Only .pdf files are allowed.",
     };
   }
 

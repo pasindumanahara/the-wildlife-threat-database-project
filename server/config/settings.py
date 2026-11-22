@@ -10,20 +10,28 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
+NIC_ENCRYPTION_KEY = os.getenv('NIC_ENCRYPTION_KEY', '')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-e&0_h-yj70v=1^n=4r8k%$@i_^nx!!opx6_4z0k#a0*1yx-zek'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-e&0_h-yj70v=1^n=4r8k%$@i_^nx!!opx6_4z0k#a0*1yx-zek')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'true').lower() == 'true'
+if not DEBUG and not os.getenv('DJANGO_SECRET_KEY'):
+    raise ImproperlyConfigured('Set DJANGO_SECRET_KEY when DJANGO_DEBUG=false.')
 
 # ALLOWED_HOSTS = []
 
@@ -38,7 +46,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts', # add the accounts app
+    'database_schema',
 ]
+
+# Application tables come from database/001_initial_schema.sql, while Django keeps
+# its own admin account and session tables.
+MIGRATION_MODULES = {'accounts': None}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -84,20 +97,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+# Re-enable password policy validators here when the project defines its policy.
+AUTH_PASSWORD_VALIDATORS = []
+# AUTH_PASSWORD_VALIDATORS = [
+#     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+#     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+#     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+#     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+# ]
 
 
 # Internationalization
@@ -116,15 +123,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_ROOT = BASE_DIR / 'private_uploads'
 
 """
     ADD CHANGES AFTER THIS LINE
 """
-
-import os
-from dotenv import load_dotenv
-
-load_dotenv(BASE_DIR / '.env')
 
 '''New database settings for PostgreSQL'''
 DATABASES = {
@@ -141,6 +144,9 @@ DATABASES = {
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
 ALLOWED_HOSTS = [

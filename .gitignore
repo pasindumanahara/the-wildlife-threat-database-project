@@ -1,6 +1,5 @@
 # environment variables
 .env
-.env.*
 !.env.example
 *.pem
 *.key
@@ -42,6 +41,7 @@ htmlcov/
 # Backend-generated files
 server/staticfiles/
 server/media/
+server/private_uploads/
 
 # Editor directories and files
 .vscode/*
@@ -56,3 +56,6 @@ server/media/
 
 # Personal assistant notes
 AGENTS.md
+
+!database/
+!database/001_initial_schema.sql

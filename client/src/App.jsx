@@ -3,6 +3,7 @@ import {LoginPage} from "./pages/LoginPage";
 import {SignupPage} from "./pages/SignupPage";
 import {DashboardPage} from "./pages/DashboardPage";
 import {BrowserRouter, Navigate, Route, Routes} from "react-router-dom";
+import {ProtectedRoute} from "./components/auth/ProtectedRoute";
 
 
 const Notification = lazy(() => import("./components/animation/alert/Notification"));
@@ -20,7 +21,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage notify={notify} dismiss={dismiss} />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       <Suspense fallback={null}>
