@@ -9,6 +9,7 @@ import {ProfilePhotoStep} from "../components/auth/signup/ProfilePhotoStep";
 import {LoginImagePanel} from "../components/auth/login/LoginImagePanel";
 import {ArrowLeft} from "lucide-react";
 import {Link, useNavigate} from "react-router-dom";
+import {register} from "../services/auth";
 
 export function SignupPage() {
   const navigate = useNavigate();
@@ -18,18 +19,19 @@ export function SignupPage() {
   const [documentFile, setDocumentFile] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const officer = account === "officer";
   const titles = [
     "Create an account",
     officer ? "Enter your officer details" : "Enter your details",
-    "Add a profile photo",
+    "Add a profile photo (optional)",
   ];
   const descriptions = [
     "Choose the account type that applies to you.",
     officer
       ? "Add your personal and work information, then upload a document that verifies your government role."
       : "Add your personal information and choose your login details.",
-    "Choose the image you’d like to display on your profile.",
+    "Choose an image for your profile, or create your account without one.",
   ];
 
   function handleAccount(event) {
@@ -66,17 +68,31 @@ export function SignupPage() {
     setError("");
     setStep(step - 1);
   }
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (step === 1 && !account)
       return setError("Choose an account type to continue.");
     if (step === 2 && officer && !documentFile)
       return setError("Choose a verification document to continue.");
-    if (step === 3 && !photo)
-      return setError("Choose a profile photo to continue.");
     setError("");
-    if (step < 3) setStep(step + 1);
-    else navigate("/dashboard");
+    if (step < 3) return setStep(step + 1);
+
+    const payload = new FormData();
+    payload.append("account", account);
+    for (const [key, value] of Object.entries(draft)) payload.append(key, value);
+    if (photo) payload.append("photo", photo);
+    if (officer && documentFile) payload.append("document", documentFile);
+    setBusy(true);
+    try {
+      const result = await register(payload);
+      navigate("/dashboard", {replace: true, state: {
+        notice: result.officerStatus === "pending" ? "Officer verification is pending." : "",
+      }});
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <main className="grid min-h-dvh place-items-center overflow-x-hidden bg-zinc-100 p-4 font-display sm:p-8">
@@ -156,10 +172,11 @@ export function SignupPage() {
               )}
               <Button
                 type="submit"
+                disabled={busy}
                 size={48}
                 className={`text-white! ${step === 1 ? "w-full" : ""}`}
               >
-                {step === 3 ? "Create account" : "Continue"}
+                {busy ? "Creating account..." : step === 3 ? "Create account" : "Continue"}
               </Button>
             </div>
           </form>

@@ -47,7 +47,7 @@ export function SignupDetailsStep({officer, draft, onChange, documentFile, onDoc
           <legend className="px-1 font-semibold">Officer verification</legend>
           <p className="text-sm font-medium">Verification document</p>
           <p className="text-sm text-zinc-600">Upload a document that verifies your government role.</p>
-          <FileUpload file={documentFile} type="document" label="Choose a verification document" description="Upload a document that verifies your government role." onSelect={onDocument} />
+          <FileUpload file={documentFile} type="document" label="Choose a verification document" description="Upload a PDF that verifies your government role." accept=".pdf,application/pdf" onSelect={onDocument} />
         </fieldset>}
       </div>
     </div>
