@@ -41,6 +41,14 @@ The Django backend provides signup, login, logout, CSRF, and current-user
 endpoints under `/api/auth/`. The client calls these endpoints through Vite's
 `/api` proxy.
 
+Signup requires a valid Sri Lankan NIC, email, password, mobile number, and
+personal address. Passwords must be 8–128 characters with uppercase and
+lowercase letters, a number, and a symbol, without whitespace. Officer signup
+also requires a designation, Sri Lankan office phone, work address, and a PDF
+verification document up to 10 MB. Optional profile photos must be JPEG, PNG,
+or WebP images up to 2 MB with dimensions from 100×100 to 4096×4096 pixels.
+The backend validates these inputs and uploads before saving them.
+
 The application tables come from `database/001_initial_schema.sql`. Django's
 separate admin and session tables are created by its migrations.
 

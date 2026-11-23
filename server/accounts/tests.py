@@ -4,11 +4,15 @@ from io import BytesIO
 
 from PIL import Image
 from cryptography.fernet import Fernet
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase, override_settings
+from django.test import Client, SimpleTestCase, TestCase, override_settings
 
-from .models import Address, MediaAsset, OfficerApplication, User, UserRole
+from .models import (Address, MediaAsset, OfficerApplication, User, UserRole,
+                     validate_nic, validate_office_phone, validate_signup_email,
+                     validate_signup_password)
 from .nic_crypto import NICCipher
+from .views import validate_upload
 
 
 @override_settings(NIC_ENCRYPTION_KEY=Fernet.generate_key().decode())
@@ -20,6 +24,11 @@ class AuthenticationTests(TestCase):
             'username': 'wildlife_tester',
             'email': 'tester@example.com',
             'password': 'A-strong-test-password-123',
+            'nic': '123456789V',
+            'mobile': '771234567',
+            'AddressLine1': '1 Main Road',
+            'City': 'Colombo',
+            'PostalCode': '00100',
         }
 
     def post(self, path, details, token=None):
@@ -60,7 +69,7 @@ class AuthenticationTests(TestCase):
 
     def test_full_officer_signup_saves_profile_and_pending_application(self):
         image_bytes = BytesIO()
-        Image.new('RGB', (2, 2), 'green').save(image_bytes, format='PNG')
+        Image.new('RGB', (100, 100), 'green').save(image_bytes, format='PNG')
         details = {
             **self.details,
             'account': 'officer',
@@ -112,15 +121,66 @@ class AuthenticationTests(TestCase):
         self.assertFalse(MediaAsset.objects.filter(owner_user=user).exists())
         self.assertEqual(Address.objects.filter(user=user).count(), 1)
 
-    def test_password_policy_is_temporarily_disabled(self):
+    def test_password_policy_rejects_weak_password(self):
         details = {**self.details, 'username': 'password', 'password': 'password'}
         response = self.post('/api/auth/register/', details, self.token())
-        self.assertEqual(response.status_code, 201, response.content)
-        user = User.objects.get(username='password')
-        self.assertTrue(user.check_password('password'))
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertFalse(User.objects.filter(username='password').exists())
+
+    def test_signup_rejects_invalid_required_fields(self):
+        for field, value in (
+            ('nic', ''),
+            ('nic', '120007890V'),
+            ('mobile', ''),
+            ('AddressLine1', ''),
+            ('email', 'tester..name@example.com'),
+        ):
+            with self.subTest(field=field, value=value):
+                response = self.post('/api/auth/register/', {
+                    **self.details, field: value,
+                }, self.token())
+                self.assertEqual(response.status_code, 400, response.content)
+        self.assertFalse(User.objects.exists())
 
     def test_nic_cipher_is_randomized_and_rejects_wrong_key(self):
         value = NICCipher().encrypt('123456789V')
         self.assertNotEqual(value, NICCipher().encrypt('123456789V'))
         with self.assertRaises(ValueError):
             NICCipher(Fernet.generate_key()).decrypt(value)
+
+
+class SignupValidationTests(SimpleTestCase):
+    def test_signup_validators_match_form_rules(self):
+        self.assertEqual(validate_nic(' 123456789v '), '123456789V')
+        self.assertEqual(validate_signup_email(' Tester@Example.com '), 'tester@example.com')
+        self.assertEqual(validate_office_phone('(+94) 11-2345678'), '+94112345678')
+        self.assertEqual(validate_signup_password('Strong-Password123'), 'Strong-Password123')
+        for validator, value in (
+            (validate_nic, '1234567890V'),
+            (validate_nic, '189900112345'),
+            (validate_nic, '120007890V'),
+            (validate_signup_email, 'test..name@example.com'),
+            (validate_signup_password, 'Password 123!'),
+            (validate_office_phone, '+940123456789'),
+        ):
+            with self.subTest(validator=validator.__name__, value=value):
+                with self.assertRaises(ValidationError):
+                    validator(value)
+
+    def test_upload_validation_rejects_disguised_files(self):
+        for name, content, content_type, kind in (
+            ('proof.exe.pdf', b'%PDF-1.4\n', 'application/pdf', 'document'),
+            ('proof.pdf', b'not a pdf', 'application/pdf', 'document'),
+            ('proof.pdf', b'%PDF-1.4\n', 'text/plain', 'document'),
+            ('photo.png', b'%PDF-1.4\n', 'image/png', 'photo'),
+        ):
+            with self.subTest(name=name, content_type=content_type, kind=kind):
+                file = SimpleUploadedFile(name, content, content_type=content_type)
+                with self.assertRaises(ValidationError):
+                    validate_upload(file, kind)
+
+        small_image = BytesIO()
+        Image.new('RGB', (99, 100), 'green').save(small_image, format='PNG')
+        file = SimpleUploadedFile('photo.png', small_image.getvalue(), content_type='image/png')
+        with self.assertRaises(ValidationError):
+            validate_upload(file, 'photo')

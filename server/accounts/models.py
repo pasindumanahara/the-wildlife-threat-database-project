@@ -1,10 +1,67 @@
+import re
 import uuid
+from datetime import date
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from .nic_crypto import NICCipher
+
+
+def validate_nic(nic):
+    if not isinstance(nic, str) or not nic.strip():
+        raise ValidationError('NIC number is required.')
+    nic = nic.strip().upper()
+    old = re.fullmatch(r'[0-9]{2}([0-9]{3})[0-9]{4}[VX]', nic)
+    new = re.fullmatch(r'([0-9]{4})([0-9]{3})[0-9]{5}', nic)
+    if old:
+        day = int(old.group(1))
+    elif new:
+        if not 1900 <= int(new.group(1)) <= date.today().year:
+            raise ValidationError('NIC contains an invalid birth year.')
+        day = int(new.group(2))
+    else:
+        raise ValidationError('Enter a valid NIC (9 digits followed by V/X, or 12 digits).')
+    if not (1 <= day <= 366 or 501 <= day <= 866):
+        raise ValidationError('NIC contains an invalid date code.')
+    return nic
+
+
+def validate_signup_email(email):
+    if not isinstance(email, str) or not email.strip():
+        raise ValidationError('Email address is required.')
+    email = email.strip().lower()
+    if len(email) > 254:
+        raise ValidationError('Email address is too long.')
+    if not re.fullmatch(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', email) or '..' in email:
+        raise ValidationError('Enter a valid email address.')
+    return email
+
+
+def validate_signup_password(password):
+    if not isinstance(password, str) or not password:
+        raise ValidationError('Password is required.')
+    if not 8 <= len(password) <= 128:
+        raise ValidationError('Password must be between 8 and 128 characters long.')
+    if re.search(r'\s', password):
+        raise ValidationError('Password cannot contain spaces.')
+    if not (re.search(r'[A-Z]', password) and re.search(r'[a-z]', password)
+            and re.search(r'[0-9]', password)):
+        raise ValidationError('Password must include uppercase and lowercase letters and a number.')
+    if not any(char in "!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~`" for char in password):
+        raise ValidationError('Password must include at least one special character.')
+    return password
+
+
+def validate_office_phone(phone):
+    if not isinstance(phone, str) or not phone.strip():
+        raise ValidationError('Office phone number is required.')
+    cleaned = re.sub(r'[\s\-()]', '', phone.strip())
+    if not re.fullmatch(r'(?:0|\+94|94)[1-9][0-9]{8}', cleaned):
+        raise ValidationError('Enter a valid Sri Lankan office phone number.')
+    return cleaned
 
 
 # The application tables are defined by database/001_initial_schema.sql.
