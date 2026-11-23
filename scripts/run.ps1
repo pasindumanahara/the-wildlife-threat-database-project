@@ -3,9 +3,8 @@
 Start Django and the Vite client for local development.
 
 .DESCRIPTION
-Prompts for the PostgreSQL password each run. It is passed to Django only in
-the child process environment and is not written to a file. Press Ctrl+C to
-stop both servers.
+Uses the local PostgreSQL password configured below. Press Ctrl+C to stop both
+servers.
 
 .EXAMPLE
 .\scripts\run.ps1
@@ -135,12 +134,7 @@ public sealed class ServerJob : IDisposable {
         } finally { Pop-Location }
     }
 
-    if (-not $env:DB_PASSWORD) {
-        $securePassword = Read-Host 'PostgreSQL password for the database user' -AsSecureString
-        $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-        try { $env:DB_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) }
-        finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
-    }
+    $env:DB_PASSWORD = '1234'
     $env:DB_NAME = $DatabaseName
     $env:DB_USER = $DatabaseUser
     $env:DB_HOST = $DatabaseHost
